@@ -10,14 +10,14 @@ class Finn < Formula
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/getfinn/finn/releases/download/v#{version}/finn-macos-arm64"
-      sha256 "PLACEHOLDER_ARM64_SHA256"
+      sha256 "PLACEHOLDER_ARM64"
 
       def install
         bin.install "finn-macos-arm64" => "finn"
       end
     else
       url "https://github.com/getfinn/finn/releases/download/v#{version}/finn-macos-intel"
-      sha256 "PLACEHOLDER_INTEL_SHA256"
+      sha256 "PLACEHOLDER_INTEL"
 
       def install
         bin.install "finn-macos-intel" => "finn"

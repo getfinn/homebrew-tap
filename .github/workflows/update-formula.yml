@@ -45,34 +45,30 @@ jobs:
           curl -fsSL -o finn-macos-arm64 \
             "https://github.com/getfinn/finn/releases/download/v${VERSION}/finn-macos-arm64"
           SHA_ARM64=$(sha256sum finn-macos-arm64 | cut -d' ' -f1)
-          echo "arm64_sha=${SHA_ARM64}" >> $GITHUB_OUTPUT
+          echo "sha_arm64=${SHA_ARM64}" >> $GITHUB_OUTPUT
           echo "ARM64 SHA256: ${SHA_ARM64}"
 
           echo "Downloading intel binary..."
           curl -fsSL -o finn-macos-intel \
             "https://github.com/getfinn/finn/releases/download/v${VERSION}/finn-macos-intel"
           SHA_INTEL=$(sha256sum finn-macos-intel | cut -d' ' -f1)
-          echo "intel_sha=${SHA_INTEL}" >> $GITHUB_OUTPUT
+          echo "sha_intel=${SHA_INTEL}" >> $GITHUB_OUTPUT
           echo "Intel SHA256: ${SHA_INTEL}"
 
       - name: Update formula
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          SHA_ARM64="${{ steps.sha.outputs.arm64_sha }}"
-          SHA_INTEL="${{ steps.sha.outputs.intel_sha }}"
+          SHA_ARM64="${{ steps.sha.outputs.sha_arm64 }}"
+          SHA_INTEL="${{ steps.sha.outputs.sha_intel }}"
 
           # Update version
           sed -i "s/version \".*\"/version \"${VERSION}\"/" Formula/finn.rb
 
-          # Update SHA256 for arm64
-          sed -i "s/sha256 \".*\" # arm64/sha256 \"${SHA_ARM64}\" # arm64/" Formula/finn.rb
-          # Also handle placeholder format
-          sed -i "s/sha256 \"PLACEHOLDER_ARM64_SHA256\"/sha256 \"${SHA_ARM64}\" # arm64/" Formula/finn.rb
+          # Update ARM64 SHA256 (first occurrence in arm? block)
+          sed -i "0,/sha256 \"[^\"]*\"/s/sha256 \"[^\"]*\"/sha256 \"${SHA_ARM64}\"/" Formula/finn.rb
 
-          # Update SHA256 for intel
-          sed -i "s/sha256 \".*\" # intel/sha256 \"${SHA_INTEL}\" # intel/" Formula/finn.rb
-          # Also handle placeholder format
-          sed -i "s/sha256 \"PLACEHOLDER_INTEL_SHA256\"/sha256 \"${SHA_INTEL}\" # intel/" Formula/finn.rb
+          # Update Intel SHA256 (second occurrence in else block)
+          sed -i "0,/sha256 \"${SHA_ARM64}\"/! {0,/sha256 \"[^\"]*\"/s/sha256 \"[^\"]*\"/sha256 \"${SHA_INTEL}\"/}" Formula/finn.rb
 
           echo "Updated Formula/finn.rb:"
           cat Formula/finn.rb
