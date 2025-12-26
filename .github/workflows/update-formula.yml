@@ -1,0 +1,87 @@
+name: Update Formula
+
+on:
+  # Triggered by the main finn repo when a new release is published
+  repository_dispatch:
+    types: [release-published]
+
+  # Manual trigger for initial setup or fixes
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update to (e.g., 1.0.0, without v prefix)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.event.client_payload.version }}"
+          fi
+          # Remove 'v' prefix if present
+          VERSION="${VERSION#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Updating formula to version: ${VERSION}"
+
+      - name: Download binaries and calculate SHA256
+        id: sha
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          echo "Downloading arm64 binary..."
+          curl -fsSL -o finn-macos-arm64 \
+            "https://github.com/getfinn/finn/releases/download/v${VERSION}/finn-macos-arm64"
+          SHA_ARM64=$(sha256sum finn-macos-arm64 | cut -d' ' -f1)
+          echo "arm64_sha=${SHA_ARM64}" >> $GITHUB_OUTPUT
+          echo "ARM64 SHA256: ${SHA_ARM64}"
+
+          echo "Downloading intel binary..."
+          curl -fsSL -o finn-macos-intel \
+            "https://github.com/getfinn/finn/releases/download/v${VERSION}/finn-macos-intel"
+          SHA_INTEL=$(sha256sum finn-macos-intel | cut -d' ' -f1)
+          echo "intel_sha=${SHA_INTEL}" >> $GITHUB_OUTPUT
+          echo "Intel SHA256: ${SHA_INTEL}"
+
+      - name: Update formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA_ARM64="${{ steps.sha.outputs.arm64_sha }}"
+          SHA_INTEL="${{ steps.sha.outputs.intel_sha }}"
+
+          # Update version
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" Formula/finn.rb
+
+          # Update SHA256 for arm64
+          sed -i "s/sha256 \".*\" # arm64/sha256 \"${SHA_ARM64}\" # arm64/" Formula/finn.rb
+          # Also handle placeholder format
+          sed -i "s/sha256 \"PLACEHOLDER_ARM64_SHA256\"/sha256 \"${SHA_ARM64}\" # arm64/" Formula/finn.rb
+
+          # Update SHA256 for intel
+          sed -i "s/sha256 \".*\" # intel/sha256 \"${SHA_INTEL}\" # intel/" Formula/finn.rb
+          # Also handle placeholder format
+          sed -i "s/sha256 \"PLACEHOLDER_INTEL_SHA256\"/sha256 \"${SHA_INTEL}\" # intel/" Formula/finn.rb
+
+          echo "Updated Formula/finn.rb:"
+          cat Formula/finn.rb
+
+      - name: Commit and push
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/finn.rb
+          git diff --staged --quiet || git commit -m "Update finn to v${VERSION}"
+          git push
