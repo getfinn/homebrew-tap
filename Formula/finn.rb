@@ -4,20 +4,20 @@
 class Finn < Formula
   desc "Desktop daemon for Finn - control LLM assistants from your phone"
   homepage "https://tryfinn.ai"
-  version "1.7.0"
+  version "1.8.0"
   license "MIT"
 
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/getfinn/finn/releases/download/v#{version}/finn-macos-arm64"
-      sha256 "13b844ffa250202216829c21e82fa741c66fd18c3709ca58be41405d35684170"
+      sha256 "3eb01521c4961107682bbd2d5379c02d79e55d2aed86af72d11d40e9547ec830"
 
       def install
         bin.install "finn-macos-arm64" => "finn"
       end
     else
       url "https://github.com/getfinn/finn/releases/download/v#{version}/finn-macos-intel"
-      sha256 "e55ddb5d128c56ebb6f0218a2c15561db21db2c8f4e92e80a5a251d7da09f1b0"
+      sha256 "8b40b496b60bc4e9c5c4f83152d39c7b38d0f652e4ee37799ebdb5fca6eb34c6"
 
       def install
         bin.install "finn-macos-intel" => "finn"
